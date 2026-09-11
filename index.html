@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#05080d" />
+  <title>ROBO·VIEWER VR — Visualizador robótico del cuerpo humano</title>
+  <meta name="description" content="Juego de realidad aumentada: ve tus manos, brazos y todo tu cuerpo convertidos en una máquina robótica en tiempo real. 100% en el navegador, funciona en GitHub Pages." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- ================= PANTALLA: PORTADA ================= -->
+  <section id="screen-home" class="screen active">
+    <div class="home-inner">
+      <div class="logo-block">
+        <div class="logo-badge">
+          <span class="logo-hex">⬡</span>
+        </div>
+        <h1 class="logo-title">ROBO<span class="accent">·</span>VIEWER <em>VR</em></h1>
+        <p class="logo-sub">Visualizador robótico del cuerpo humano</p>
+      </div>
+
+      <div class="card home-card">
+        <p class="home-tag">
+          Apunta la cámara de tu celular a tu cuerpo y mira cómo tus
+          <b>manos, dedos, brazos, torso y cara</b> se transforman en
+          <b>mecánica robótica</b> en tiempo real.
+        </p>
+
+        <div class="how">
+          <div class="how-step"><span class="how-n">1</span> Muestra tu cuerpo a la cámara (tus manos o de cuerpo completo)</div>
+          <div class="how-step"><span class="how-n">2</span> Muévete para cargar la <b>batería robótica</b></div>
+          <div class="how-step"><span class="how-n">3</span> Al llegar a <b>100%</b> activas una <b>TRANSFORMACIÓN</b> ⚡</div>
+        </div>
+
+        <div class="cam-pick" role="radiogroup" aria-label="Cámara">
+          <label class="cam-opt">
+            <input type="radio" name="cam" value="user" checked />
+            <span class="cam-ico">🤳</span> Cámara frontal
+          </label>
+          <label class="cam-opt">
+            <input type="radio" name="cam" value="environment" />
+            <span class="cam-ico">📷</span> Cámara trasera
+          </label>
+        </div>
+
+        <button id="btn-start" class="btn-primary">▶&nbsp; INICIAR EXPERIENCIA</button>
+
+        <p class="privacy">
+          🔒 Privacidad total: todo el procesamiento ocurre <b>en tu dispositivo</b>.
+          Nada se sube a internet.
+        </p>
+        <p class="req">
+          Requiere Chrome / Edge / Safari actualizado y acceso a la cámara (se sirve por HTTPS).
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: CARGANDO ================= -->
+  <section id="screen-loading" class="screen">
+    <div class="loading-inner">
+      <div class="loader-ring"><span></span><span></span><span></span></div>
+      <p id="loading-status" class="loading-status">Preparando módulos robóticos…</p>
+      <div class="loading-bar"><div id="loading-fill"></div></div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: ERROR ================= -->
+  <section id="screen-error" class="screen">
+    <div class="card error-card">
+      <div class="error-ico">⚠️</div>
+      <h2>Señal perdida</h2>
+      <p id="error-msg" class="error-msg"></p>
+      <ul class="error-hints">
+        <li>Permite el acceso a la cámara cuando el navegador lo pida.</li>
+        <li>La página debe cargarse por <b>HTTPS</b> (GitHub Pages siempre lo hace).</li>
+        <li>Cierra otras apps que usen la cámara y reintentar.</li>
+      </ul>
+      <button id="btn-retry" class="btn-primary">↻ &nbsp;REINTENTAR</button>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: APP (cámara + HUD) ================= -->
+  <section id="screen-app" class="screen">
+    <div id="stage">
+      <video id="cam" playsinline muted autoplay></video>
+      <canvas id="fx"></canvas>
+      <div class="scanlines" aria-hidden="true"></div>
+      <div class="vignette" aria-hidden="true"></div>
+      <div class="flash" id="flash" aria-hidden="true"></div>
+    </div>
+
+    <!-- HUD superior izquierda -->
+    <div class="hud hud-tl">
+      <div class="hud-line">
+        <span class="dot" id="link-dot"></span>
+        <span id="link-text">ENLACE ACTIVO</span>
+      </div>
+      <div class="hud-line dim">
+        <span id="fps-text">FPS --</span>
+        <span class="sep">|</span>
+        <span id="cam-text">CAM: FRONTAL</span>
+      </div>
+      <div class="hud-line dim"><span id="mode-text">MODO: MANUAL</span></div>
+    </div>
+
+    <!-- HUD superior derecha -->
+    <div class="hud hud-tr">
+      <button class="hud-btn" id="btn-cam" title="Cambiar cámara">📷 <span id="cam-btn-label">CAM</span></button>
+      <button class="hud-btn" id="btn-fs" title="Pantalla completa">⛶</button>
+      <button class="hud-btn" id="btn-sound" title="Sonido">🔊</button>
+      <button class="hud-btn" id="btn-exit" title="Salir">✕</button>
+    </div>
+
+    <!-- Tostadas / logros -->
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <!-- Transformación -->
+    <div id="transform-banner" class="transform-banner hidden">
+      <span>⚡ TRANSFORMACIÓN COMPLETADA ⚡</span>
+    </div>
+
+    <!-- HUD inferior -->
+    <div class="hud hud-b">
+      <div class="chips">
+        <button class="chip active" id="chip-hands" title="Mostrar/ocultar manos robóticas">✋ MANOS</button>
+        <button class="chip active" id="chip-body" title="Mostrar/ocultar exoesqueleto">⚙️ CUERPO</button>
+        <button class="chip active" id="chip-face" title="Mostrar/ocultar visor facial">👁 CARA</button>
+        <button class="chip" id="btn-exit2" title="Salir de la experiencia">SALIR</button>
+      </div>
+      <div class="meter-block">
+        <div class="meter-head">
+          <span class="meter-label">BATERÍA ROBÓTICA</span>
+          <span id="meter-pct">0%</span>
+        </div>
+        <div class="meter"><div id="meter-fill"></div><div class="meter-ticks" aria-hidden="true"></div></div>
+        <div class="meter-foot">
+          <span class="dim" id="meter-hint">Muévete para cargar la energía</span>
+          <span class="score">⚡ TRANSFORMACIONES: <b id="score">0</b></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
